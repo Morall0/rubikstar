@@ -81,6 +81,6 @@ class Cube:
 
 
 cube = Cube()
-cube.print_cube_faces()
+cube.print_state()
 cube.rotate_face_90deg("B", True)
-cube.print_cube_faces()
+cube.print_state()
