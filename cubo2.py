@@ -21,7 +21,7 @@ class Cube:
             "BU": (4, 0), "BR": (4, 1), "BD": (4, 2), "BL": (4, 3),
             "UR": (0, 1), "DR": (2, 1), "DL": (2, 3), "UL": (0, 3)
         }
-        # TODO: Sort the edges and corners
+
         self.faces_map = {  # A map to facilitate rotations
             "U": {
                 "corners": ["URF", "ULF", "ULB", "URB"],
@@ -68,11 +68,11 @@ class Cube:
         else:
             # Rotating corners
             self.corners[corners[0]], self.corners[corners[1]], self.corners[corners[2]], self.corners[corners[3]] = \
-                self.corners[corners[1]], self.corners[corners[2]], self.corners[corners[3]], self.corners[corners[1]]
+                self.corners[corners[1]], self.corners[corners[2]], self.corners[corners[3]], self.corners[corners[0]]
 
             # Rotating edges
             self.edges[edges[0]], self.edges[edges[1]], self.edges[edges[2]], self.edges[edges[3]] = \
-                self.edges[edges[1]], self.edges[edges[2]], self.edges[edges[3]], self.edges[edges[1]]
+                self.edges[edges[1]], self.edges[edges[2]], self.edges[edges[3]], self.edges[edges[0]]
 
     def print_state(self):
         print("Corners:", self.corners)
