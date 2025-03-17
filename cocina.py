@@ -1,5 +1,8 @@
 import copy
 import random
+from solver import Solver
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 
 # --- Helpers para manipulación de bits de esquinas y aristas ---
 def get_corner(corners, i):
@@ -93,7 +96,7 @@ MOVE_TABLE = {
 
 # --- Clase BitboardCube ---
 class BitboardCube:
-    CENTER_COLORS = ['W', 'Y', 'B', 'G', 'R', 'O']
+    CENTER_COLORS = ['Y', 'W', 'B', 'G', 'R', 'O']
     # Tablas de mapeo para impresión, basadas en la versión con listas.
     CORNER_MAPPING = [
         ((0,8), (4,2), (3,0)),  # Slot 0: UFR
@@ -216,108 +219,83 @@ class BitboardCube:
             for color, (face, pos) in zip(solved_facelets, BitboardCube.EDGE_MAPPING[slot]):
                 faces[face][pos] = color
         return faces
+    def plot_2d(self):
+          face_order = ['U', 'L', 'F', 'R', 'B', 'D']
+          face_positions = {
+              'U': (1, 3), 'L': (0, 2), 'F': (1, 2), 'R': (2, 2),
+              'B': (3, 2), 'D': (1, 1)
+          }
+          colors = {'W': 'white', 'Y': 'yellow', 'B': 'blue', 'G': 'green', 'R': 'red', 'O': 'orange'}
+          cube_state = self.to_list_cube()
+          fig, ax = plt.subplots(figsize=(6, 6))
+          ax.set_xlim(0, 4)
+          ax.set_ylim(0, 4)
+          ax.set_xticks([])
+          ax.set_yticks([])
+          ax.set_frame_on(False)
+          
+          for face, (fx, fy) in face_positions.items():
+              face_index = face_order.index(face)
+              face_data = cube_state[face_index]
+              for i in range(3):
+                  for j in range(3):
+                      color = colors.get(face_data[i * 3 + j], 'gray')
+                      ax.add_patch(Rectangle((fx + j * 0.3, fy - i * 0.3), 0.3, 0.3, edgecolor='black', facecolor=color))
+          plt.show()
 
-# --- Función auxiliar para imprimir el cubo en forma de “net” ---
+
+# --- Función auxiliar para imprimir el cubo
 def print_bitboard_cube_net(cube):
-    faces = cube.to_list_cube()
-    U = faces[0]
-    D = faces[1]
-    L = faces[2]
-    R = faces[3]
-    F = faces[4]
-    B = faces[5]
+        faces = cube.to_list_cube()
+        U = faces[0]
+        D = faces[1]
+        L = faces[2]
+        R = faces[3]
+        F = faces[4]
+        B = faces[5]
 
-    print("        {} {} {}".format(U[0], U[1], U[2]))
-    print("        {} {} {}".format(U[3], U[4], U[5]))
-    print("        {} {} {}".format(U[6], U[7], U[8]))
-    print()
+        print("        {} {} {}".format(U[0], U[1], U[2]))
+        print("        {} {} {}".format(U[3], U[4], U[5]))
+        print("        {} {} {}".format(U[6], U[7], U[8]))
+        print()
 
-    for i in range(3):
-        print("{} {} {}   {} {} {}   {} {} {}   {} {} {}".format(
-            L[3*i], L[3*i+1], L[3*i+2],
-            F[3*i], F[3*i+1], F[3*i+2],
-            R[3*i], R[3*i+1], R[3*i+2],
-            B[3*i], B[3*i+1], B[3*i+2]
-        ))
-    print()
+        for i in range(3):
+            print("{} {} {}   {} {} {}   {} {} {}   {} {} {}".format(
+                L[3*i], L[3*i+1], L[3*i+2],
+                F[3*i], F[3*i+1], F[3*i+2],
+                R[3*i], R[3*i+1], R[3*i+2],
+                B[3*i], B[3*i+1], B[3*i+2]
+            ))
+        print()
 
-    print("        {} {} {}".format(D[0], D[1], D[2]))
-    print("        {} {} {}".format(D[3], D[4], D[5]))
-    print("        {} {} {}".format(D[6], D[7], D[8]))
+        print("        {} {} {}".format(D[0], D[1], D[2]))
+        print("        {} {} {}".format(D[3], D[4], D[5]))
+        print("        {} {} {}".format(D[6], D[7], D[8]))
 
-# --- Solver ---
-class Solver:
-    def __init__(self):
-        self.heuristic_cache = {}
-        self.moves = ["U", "U'", "D", "D'", "L", "L'", "R", "R'", "F", "F'", "B", "B'"]
-        self.solution = []
-        self.nodes_searched = 0
-
-    def get_heuristic(self, cube):
-        state = cube.get_state()
-        if state in self.heuristic_cache:
-            return self.heuristic_cache[state]
-        h = cube.heuristic()
-        self.heuristic_cache[state] = h
-        return h
-
-    def ida_star(self, cube):
-        threshold = self.get_heuristic(cube)
-        path = []
-        while True:
-            temp = self.search(cube, 0, threshold, path, None)
-            if temp == 'FOUND':
-                return path
-            if temp == float('inf'):
-                return None
-            threshold = temp
-
-    def search(self, cube, g, threshold, path, previous_move):
-        self.nodes_searched += 1
-        f = g + self.get_heuristic(cube)
-        if f > threshold:
-            return f
-        if cube.is_solved():
-            return 'FOUND'
-        min_cost = float('inf')
-        successors = []
-        for move in self.moves:
-            if previous_move and move[0] == previous_move[0] and ((move.endswith("'") and not previous_move.endswith("'")) or (not move.endswith("'") and previous_move.endswith("'"))):
-                continue
-            new_cube = cube.clone()
-            new_cube.apply_move(move)
-            h = self.get_heuristic(new_cube)
-            successors.append((h, move, new_cube))
-        successors.sort(key=lambda x: x[0])
-        for h, move, new_cube in successors:
-            path.append(move)
-            temp = self.search(new_cube, g + 1, threshold, path, move)
-            if temp == 'FOUND':
-                return 'FOUND'
-            if temp < min_cost:
-                min_cost = temp
-            path.pop()
-        return min_cost
+    
 
 # --- Ejemplo de uso ---
 if __name__ == '__main__':
     cube = BitboardCube()
     moves = ["U", "U'", "D", "D'", "L", "L'", "R", "R'", "F", "F'", "B", "B'"]
-    scramble = [random.choice(moves) for _ in range(10)]
+    scramble = [random.choice(moves) for _ in range(8)]
     print("Estado inicial (resuelto):")
-    print_bitboard_cube_net(cube)
+    cube.plot_2d()
 
     cube.apply_moves(scramble)
-    print("\nDespués de scramble:")
+    print("\nDespues de scramble:")
+    cube.plot_2d()
     print_bitboard_cube_net(cube)
 
     solver = Solver()
-    print("\nBuscando solución...")
+    print("\nBuscando solucion...")
     solution = solver.ida_star(cube)
     if solution is not None:
         print("Solución encontrada:", solution)
         print("Nodos expandidos:", solver.nodes_searched)
+        
     else:
         print("No se encontró solución.")
     cube.apply_moves(solution)
+    cube.plot_2d()
     print_bitboard_cube_net(cube)
