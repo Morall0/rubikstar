@@ -1,112 +1,54 @@
-from cubo import Cube
-
 class Solver:
-    def __init__(self, cube):
-        self.initial_cube = cube
+    def __init__(self):
+        self.heuristic_cache = {}
         self.moves = ["U", "U'", "D", "D'", "L", "L'", "R", "R'", "F", "F'", "B", "B'"]
-        self.cache = {} 
+        self.solution = []
+        self.nodes_searched = 0
     
-    def heuristic(self, cube):
-        return sum(
-            1
-            for face in cube.face.values()
-            for row in face
-            for cell in row
-            if cell != face[1][1]  
-        )
+    def get_heuristic(self, cube):
+        state = cube.canonical_state()
+        if state in self.heuristic_cache:
+            return self.heuristic_cache[state]
+        h = cube.heuristic()
+        self.heuristic_cache[state] = h
+        return h
     
-    def is_solved(self, cube):
-        solved_state = Cube().state_key()  
-        return cube.state_key() == solved_state
+    def ida_star(self, cube):
+        threshold = self.get_heuristic(cube)
+        path = []
+        while True:
+            temp = self.search(cube, 0, threshold, path, None)
+            if temp == 'FOUND':
+                return path
+            if temp == float('inf'):
+                return None
+            threshold = temp
     
-    def copy_cube(self, cube):
-        new_cube = Cube()
-        new_cube.face = {k: [row[:] for row in v] for k, v in cube.face.items()}
-        return new_cube
-    
-    def inverse_move(self, move):
-        return move[:-1] if move.endswith("'") else move + "'"
-    
-    def apply_move(self, cube, move):
-        try:
-            if move == "U":
-                cube.rotate_top_clockwise()
-            elif move == "U'":
-                cube.rotate_top_counterclockwise()
-            elif move == "D":
-                cube.rotate_bottom_clockwise()
-            elif move == "D'":
-                cube.rotate_bottom_counterclockwise()
-            elif move == "L":
-                cube.rotate_left_clockwise()
-            elif move == "L'":
-                cube.rotate_left_counterclockwise()
-            elif move == "R":
-                cube.rotate_right_clockwise()
-            elif move == "R'":
-                cube.rotate_right_counterclockwise()
-            elif move == "F":
-                cube.rotate_front_clockwise()
-            elif move == "F'":
-                cube.rotate_front_counterclockwise()
-            elif move == "B":
-                cube.rotate_back_clockwise()
-            elif move == "B'":
-                cube.rotate_back_counterclockwise()
-            else:
-                raise ValueError(f"Movimiento no válido: {move}")
-        except Exception as e:
-            print(f"Error al aplicar el movimiento {move}: {e}")
-    
-    def canonical_key(self, cube):
-        rotations = [cube.state_key()]
-        for _ in range(3):
-            new_cube = self.copy_cube(cube)
-            new_cube.rotate_top_clockwise()
-            rotations.append(new_cube.state_key())
-        return min(rotations)  
-    
-    def search(self, cube, g, threshold, path, last_move):
-        key = self.canonical_key(cube)
-        if key in self.cache and self.cache[key] <= g:
-            return float('inf')
-        self.cache[key] = g
-        
-        f = g + self.heuristic(cube)
+    def search(self, cube, g, threshold, path, previous_move):
+        self.nodes_searched += 1
+        f = g + self.get_heuristic(cube)
         if f > threshold:
             return f
-        if self.is_solved(cube):
-            return path
-        
+        if cube.is_solved():
+            return 'FOUND'
         min_cost = float('inf')
-        children = []
+
+        successors = []
         for move in self.moves:
-            if last_move and (move == self.inverse_move(last_move) or move == last_move):
-                continue 
-            new_cube = self.copy_cube(cube)
-            self.apply_move(new_cube, move)
-            h = self.heuristic(new_cube)
-            children.append((h, move, new_cube))
-        children.sort(key=lambda x: x[0])
+            if previous_move and move[0] == previous_move[0] and ((move.endswith("'") and not previous_move.endswith("'")) or (not move.endswith("'") and previous_move.endswith("'"))):
+                continue
+            new_cube = cube.clone()
+            new_cube.apply_move(move)
+            h = self.get_heuristic(new_cube)
+            successors.append((h, move, new_cube))
+        successors.sort(key=lambda x: x[0])
         
-        for h, move, new_cube in children:
+        for h, move, new_cube in successors:
             path.append(move)
             temp = self.search(new_cube, g + 1, threshold, path, move)
-            if isinstance(temp, list):
-                return temp
+            if temp == 'FOUND':
+                return 'FOUND'
             if temp < min_cost:
                 min_cost = temp
             path.pop()
         return min_cost
-    
-    def solve(self):
-        threshold = self.heuristic(self.initial_cube)
-        path = []
-        while True:
-            self.cache = {} 
-            temp = self.search(self.initial_cube, 0, threshold, path, None)
-            if isinstance(temp, list):
-                return temp
-            if temp == float('inf'):
-                return None
-            threshold = temp

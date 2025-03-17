@@ -1,26 +1,36 @@
-from cubo import Cube
-from scrambler import scramble_cube
+from cubo import RubikCube
 from solver import Solver
+import random  
+
+
+
 
 if __name__ == '__main__':
-    cube = Cube()
-  
+
+    cube = RubikCube()
     
-    #scramble_cube(cube)
-    cube.rotate_top_clockwise()
-    cube.rotate_front_counterclockwise()
+    #Generación aleatoria de movimientos
+    moves = ["U", "U'", "D", "D'", "L", "L'", "R", "R'", "F", "F'", "B", "B'"]
+    #Modificar el rango para generar más o menos movimientos
+    scramble = [random.choice(moves) for _ in range(5)]
     
-    print("Estado inicial del cubo (mezclado):")
+    print("Estado inicial (resuelto):")
     cube.print_cube()
     
+    print("\nAplicando scramble:", scramble)
+    for move in scramble:
+        cube.apply_move(move)
+    cube.print_cube()
     
-    
-    solver = Solver(cube)
-    solution = solver.solve()
-    
+    solver = Solver()
+    print("\nBuscando solución...")
+    solution = solver.ida_star(cube)
     if solution is not None:
-        print("Secuencia de movimientos para resolver el cubo:", solution)
+        print("Solución encontrada:", solution)
+        print("Nodos expandidos:", solver.nodes_searched)
     else:
         print("No se encontró solución.")
+    for move in solution:
+        cube.apply_move(move)
         
-    
+    cube.print_cube()
