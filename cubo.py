@@ -46,6 +46,10 @@ class RubikCube:
         labels = ['U', 'D', 'L', 'R', 'F', 'B']
         for i, face in enumerate(self.cube):
             print(f"{labels[i]}: {face}")
+
+    def get_parameters(self):
+        return copy.deepcopy(self.cube)
+
     
     def clone(self):
         new_cube = RubikCube()
