@@ -14,7 +14,7 @@ if __name__ == '__main__':
     #Generación aleatoria de movimientos
     moves = ["U", "U'", "D", "D'", "L", "L'", "R", "R'", "F", "F'", "B", "B'"]
     #Modificar el rango para generar más o menos movimientos
-    scramble = [random.choice(moves) for _ in range(5)]
+    scramble = [random.choice(moves) for _ in range(7)]
     
     print("Estado inicial (resuelto):")
     cube.print_cube()
